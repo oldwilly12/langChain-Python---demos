@@ -20,8 +20,6 @@ Crear un asistente controlado con un prompt estructurado, capaz de responder seg
 - python-dotenv
 """
 
-import os
-import sys
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -39,11 +37,18 @@ Tu tarea es responder preguntas como si le hablaras a un estudiante de secundari
     ("user", "{pregunta}")
 ])
 
-question = input("Ingresa una pregunta: ")
-messages = prompt_template.invoke({"pregunta": question})
+inicio_bot = """
+¡Hola! Soy tu asistente virtual. Estoy aquí para ayudarte a entender conceptos técnicos de manera sencilla"""
+print(inicio_bot)
 
-response = llm.invoke(messages)
-print(response.content)
+while True:  
+    question = input("Ingresa una pregunta: ")
+    if question.lower() in ["exit", "quit", "salir"]:
+        print("Saliendo del asistente. ¡Hasta luego!")
+        break
+    messages = prompt_template.invoke({"pregunta": question})
+    response = llm.invoke(messages)
+    print("🤖 Asistente: ",response.content)
 
 
 

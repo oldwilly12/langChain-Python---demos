@@ -1,4 +1,6 @@
+# exclude .env's
 .env
+/ejercicios_basicos/.env
 
 /env
 config.py
