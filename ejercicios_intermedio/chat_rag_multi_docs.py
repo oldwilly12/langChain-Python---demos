@@ -41,5 +41,12 @@ docs_path = os.path.join(os.path.dirname(__file__), "..", "documents")
 def load_documents():
     loader = DirectoryLoader(
         path=docs_path,
-        glob="**/*", # Carga todos los archivos en subdirectorios
+        glob="**/*.pdf", # Carga todos los archivos en subdirectorios
+        show_progress=True
     )
+    docs = loader.load()
+    len(docs)
+    print(docs[0].page_content[:100])
+
+
+load_documents()
