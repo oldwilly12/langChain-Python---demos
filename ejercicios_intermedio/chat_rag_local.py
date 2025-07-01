@@ -26,13 +26,16 @@ Crear un chatbot que responda preguntas sobre documentos locales utilizando el p
 """
 
 # import os
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_qdrant import QdrantVectorStore
+from qdrant_client import QdrantClient
+
+load_dotenv()
 
 def load_documents(file_path):
-    file_path = "./a-practical-guide-to-building-agents.pdf"
     loader = PyPDFLoader(file_path)
     documents = loader.load()
 
@@ -43,9 +46,25 @@ def load_documents(file_path):
     )
 
     all_splits = text_splitter.split_documents(documents)
-    create_vector_store(all_splits)
+    add_to_vector_store(all_splits)
 
 
-def create_vector_store(documents):
-    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+def add_to_vector_store(documents):
+    embeddings_model = OpenAIEmbeddings(model="text-embedding-3-small")
+
+    vector_store = QdrantVectorStore.from_documents(
+        documents=documents,
+        embedding=embeddings_model,
+        url="http://localhost:6333",
+        collection_name="mi_coleccion_ia",
+    )
+
+    query = "What is an agent AI?"
+    results =vector_store.similarity_search(query, k=3)
+    for i, res in enumerate(results, 1):
+        print(f"\nResultado {i}:\n{res.page_content}\n")
+
+
+load_documents("./a-practical-guide-to-building-agents.pdf")
+    
     
