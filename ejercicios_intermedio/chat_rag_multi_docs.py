@@ -33,6 +33,9 @@ from langchain_community.document_loaders import DirectoryLoader
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_qdrant import QdrantVectorStore
+from qdrant_client import QdrantClient
+from langchain_openai import ChatOpenAI
 
 load_dotenv()
 
@@ -42,11 +45,73 @@ def load_documents():
     loader = DirectoryLoader(
         path=docs_path,
         glob="**/*.pdf", # Carga todos los archivos en subdirectorios
-        show_progress=True
+        show_progress=True,
+        loader_cls=PyPDFLoader,  # Carga archivos PDF
     )
     docs = loader.load()
-    len(docs)
-    print(docs[0].page_content[:100])
+    
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=200,
+        add_start_index=True,
+    )
+
+    all_splits = text_splitter.split_documents(docs)
+    
+    add_to_vector_store(all_splits)
+    
+
+def add_to_vector_store(docs):
+    embeddings_model = OpenAIEmbeddings(model="text-embedding-3-small")
+
+    vector_store = QdrantVectorStore.from_documents(
+        documents=docs,
+        embedding=embeddings_model,
+        url="http://localhost:6333",
+        collection_name="mi_coleccion_ia",
+    )
+
+    print("Este es un Asistente IA con rag multi-documentos. \n Puedes hacer preguntas sobre los documentos cargados.")
+    while True:
+        query = "What is an agent AI?"
+        results =vector_store.similarity_search(query, k=3)
+        for i, res in enumerate(results, 1):
+            print(f"\nResultado {i}:\n{res.page_content}\n")
+
+
+ 
+def consult_qdrant():
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+
+    qdrant = QdrantVectorStore.from_existing_collection(
+        embedding=embeddings,
+        collection_name="mi_coleccion_ia",
+        url="http://localhost:6333"
+    )
+
+    retriver = qdrant.as_retriever(search_kwargs={"k": 1})
+
+    model_llm = ChatOpenAI(
+        model="gpt-4o-mini",
+        temperature=0.5
+    )
+
+    
+
+    print("Puedes hacer preguntas sobre los documentos almacenados.")
+    while True:
+        query = input("Tu pregunta: ")
+        if query.lower() in ["salir", "exit", "quit"]:
+            break
+        results = qdrant.similarity_search(query, k=3)
+        for i, doc in enumerate(results, 1):   
+            print(f"\nResultado {i}:\n{doc.page_content}\n")
 
 
 load_documents()
+consult_qdrant()
+
+
+
+
+
