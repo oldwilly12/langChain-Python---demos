@@ -29,12 +29,17 @@ Este ejercicio te prepara para:
 
 import os
 from dotenv import load_dotenv
+from langchain import hub
 from langchain_community.document_loaders import DirectoryLoader
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
 from langchain_qdrant import QdrantVectorStore
+from langsmith import Client
 from qdrant_client import QdrantClient
+from langchain_core.runnables import RunnableLambda
 from langchain_openai import ChatOpenAI
 
 load_dotenv()
@@ -78,18 +83,26 @@ def add_to_vector_store(docs):
         for i, res in enumerate(results, 1):
             print(f"\nResultado {i}:\n{res.page_content}\n")
 
+# def format_docs(docs):
+#     return "\n\n".join(doc.page_content for doc in docs)
 
  
 def consult_qdrant():
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 
+    # client_smith = Client(
+    #     api_key=os.getenv("SMITH_API_KKEY")
+    # )
+    prompt = hub.pull("rlm/rag-prompt")
+
     qdrant = QdrantVectorStore.from_existing_collection(
         embedding=embeddings,
-        collection_name="mi_coleccion_ia",
-        url="http://localhost:6333"
+        collection_name="langchain-testing",
+        url="https://0b1daa23-c45c-4976-9441-5fcd5a788579.europe-west3-0.gcp.cloud.qdrant.io:6333",
+        api_key=os.getenv("QDRANT_API_KEY")
     )
 
-    retriver = qdrant.as_retriever(search_kwargs={"k": 1})
+    retriver = qdrant.as_retriever(search_kwargs={"k": 3})
 
     model_llm = ChatOpenAI(
         model="gpt-4o-mini",
@@ -103,12 +116,23 @@ def consult_qdrant():
         query = input("Tu pregunta: ")
         if query.lower() in ["salir", "exit", "quit"]:
             break
-        results = qdrant.similarity_search(query, k=3)
-        for i, doc in enumerate(results, 1):   
-            print(f"\nResultado {i}:\n{doc.page_content}\n")
+        
+        format_docs = RunnableLambda(lambda docs: "\n\n".join(doc.page_content for doc in docs))
 
+        qa_chain = (
+            {
+                "context": retriver | format_docs,
+                "question": RunnablePassthrough(),
+            }
+            | prompt
+            | model_llm 
+            | StrOutputParser()
+        )
 
-load_documents()
+        respuesta = qa_chain.invoke({"question": query})
+        print(f"\n Asistente: \n {respuesta}")
+
+# load_documents()
 consult_qdrant()
 
 
