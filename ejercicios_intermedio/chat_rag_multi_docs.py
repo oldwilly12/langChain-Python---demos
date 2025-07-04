@@ -86,6 +86,7 @@ def add_to_vector_store(docs):
 # def format_docs(docs):
 #     return "\n\n".join(doc.page_content for doc in docs)
 
+
  
 def consult_qdrant():
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
@@ -109,7 +110,6 @@ def consult_qdrant():
         temperature=0.5
     )
 
-    
 
     print("Puedes hacer preguntas sobre los documentos almacenados.")
     while True:
