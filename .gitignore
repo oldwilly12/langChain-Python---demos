@@ -6,3 +6,4 @@
 config.py
 /ejercicios_avanzados/.env
 /ejercicios_langchian_page/.env
+node_modules
